@@ -4,6 +4,7 @@ from gym.utils import seeding
 from pywinauto import Application, findwindows
 from pywinauto.keyboard import send_keys
 from time import sleep
+from psutil import Process
 
 
 class SoullessEnv(gym.Env):
@@ -11,15 +12,23 @@ class SoullessEnv(gym.Env):
 
     def __init__(self):
         app = self.start_game()
+        self.process_id = app.process
+        self.process = Process(pid=self.process_id)
         self.dialog = self.get_window_dialog(app)
         self.navigate_main_menu()
+        self.enter_avoidance()
+        self.process.suspend()
+
 
     def start_game(self):
-        Application().start(r"C:\Programs\Fangames\Soulless 1.3HM\Soulless Hard Mode(1).exe")
-        app = Application().connect(title_re="Soulless.*", timeout=10)
+        """starts the Soulless process"""
+        Application().start(r"C:\Programs\Fangames\Soulless 1.3HM bot\Soulless Hard Mode(1).exe")
+        app = Application().connect(title_re="Soulless.*", timeout=20)
         return app
 
     def get_window_dialog(self, application):
+        """:param application is the soulless application
+        :returns the main dialog of the application, which is the entry-point for interacting with it"""
         dialog = application.top_window()
         dialog.set_focus()
         return dialog
@@ -27,9 +36,17 @@ class SoullessEnv(gym.Env):
     def navigate_main_menu(self):
         """from the title screen it navigates the menus until it enters the game"""
         send_keys("{VK_LSHIFT down} {VK_LSHIFT up}")
-        print("pressing shift")
         sleep(3)
         send_keys("{VK_LSHIFT down} {VK_LSHIFT up}")
+
+    def enter_avoidance(self):
+        send_keys("{VK_LEFT down}", pause=0.05)
+        send_keys("{VK_LEFT up}")
+        sleep(2)
+        send_keys("{r down}")
+        send_keys("{r up}")
+
+
 
 
     def capture_window(self, dialog):
