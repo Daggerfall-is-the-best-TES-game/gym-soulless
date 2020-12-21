@@ -1,0 +1,6 @@
+gym>=0.17.3
+setuptools>=51.0.0
+numpy>=1.19.2
+pywinauto>=0.6.8
+psutil>=5.7.3
+pillow>=8.0.1
