@@ -4,7 +4,6 @@ from gym_soulless.envs import SoullessEnv
 if __name__ == "__main__":
     env = make("soulless-v0")
     RUNS = 10
-
     for x in range(RUNS):
         total_reward = 0.0
         total_steps = 0

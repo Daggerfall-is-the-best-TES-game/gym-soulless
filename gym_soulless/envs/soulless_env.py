@@ -56,7 +56,7 @@ class SoullessEnv(gym.Env):
 
     def capture_window(self):
         """:returns a PIL image of the dialog cropped to exclude the margins for resizing the window"""
-        return crop(self.dialog.capture_as_image(), (7, 0, 7, 7))
+        return crop(self.dialog.capture_as_image(), (8, 0, 8, 7))
 
     def step(self, action: int):
         """expects the game to be in a suspended state"""
