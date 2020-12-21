@@ -1,5 +1,5 @@
 from gym import make
-
+from gym_soulless.envs import SoullessEnv
 
 if __name__ == "__main__":
     env = make("soulless-v0")

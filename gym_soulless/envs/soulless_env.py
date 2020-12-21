@@ -32,7 +32,7 @@ class SoullessEnv(gym.Env):
 
     def start_game(self):
         """starts the Soulless process"""
-        Application().start(r"C:\Programs\Fangames\Soulless 1.3HM bot\Soulless Hard Mode(1).exe")
+        Application().start("Soulless 1.3HM/Soulless Hard Mode.exe")
         app = Application().connect(title_re="Soulless.*", timeout=20)
         return app
 
