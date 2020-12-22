@@ -9,6 +9,7 @@ from pywinauto.timings import Timings
 import re
 import numpy as np
 from PIL.ImageOps import crop
+from PIL.ImageGrab import grab
 
 
 class SoullessEnv(gym.Env):
@@ -56,7 +57,9 @@ class SoullessEnv(gym.Env):
 
     def capture_window(self):
         """:returns a PIL image of the dialog cropped to exclude the margins for resizing the window"""
-        return crop(self.dialog.capture_as_image(), (8, 0, 8, 7))
+        rect = self.dialog.rectangle()
+        left, top, right, bottom = rect.left + 8, rect.top, rect.right - 8, rect.bottom - 7
+        return grab(bbox=(left, top, right, bottom))
 
     def step(self, action: int):
         """expects the game to be in a suspended state"""
