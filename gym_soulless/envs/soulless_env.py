@@ -88,6 +88,7 @@ class SoullessEnv(gym.Env):
         """:param keystrokes is the input to the send_keys function"""
         self.process.resume()
         send_keys(keystrokes)
+        sleep(0.1)
         self.process.suspend()
 
     def reset(self):
