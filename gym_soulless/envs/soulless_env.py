@@ -93,6 +93,7 @@ class SoullessEnv(gym.Env):
 
     def reset(self):
         self.process.resume()
+        self.dialog.set_focus()
         send_keys("{r down}")
         send_keys("{r up}")
         self.process.suspend()
