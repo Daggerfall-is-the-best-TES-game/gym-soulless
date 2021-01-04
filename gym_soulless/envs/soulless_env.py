@@ -29,8 +29,7 @@ class SoullessEnv(gym.Env):
         self.PREVIOUS_ACTION = 0
         self.deathcount = self.get_deathcount()
         self.action_space = spaces.Discrete(6)
-        self.observation_space = spaces.Box(low=0, high=255, shape=self.get_observation_space_size())
-        print(self.observation_space)
+        self.observation_space = spaces.Box(low=0, high=255, shape=self.get_observation_space_size(), dtype=np.uint8)
 
     def start_game(self):
         """starts the Soulless process"""
@@ -59,7 +58,7 @@ class SoullessEnv(gym.Env):
         """:returns a np array image of the dialog cropped to exclude the margins for resizing the window"""
         rect = self.dialog.rectangle()
         left, top, right, bottom = rect.left + 8, rect.top, rect.right - 8, rect.bottom - 7
-        return np.array(grab(bbox=(left, top, right, bottom)))
+        return np.array(grab(bbox=(left, top, right, bottom)), dtype=np.uint8)
 
     def step(self, action: int):
         """expects the game to be in a suspended state"""
