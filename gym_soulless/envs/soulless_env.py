@@ -30,11 +30,12 @@ class SoullessEnv(gym.Env):
         self.deathcount = self.get_deathcount()
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(low=0, high=255, shape=self.get_observation_space_size())
+        print(self.observation_space)
 
     def start_game(self):
         """starts the Soulless process"""
-        Application().start("Soulless 1.3HM/Soulless Hard Mode.exe")
-        app = Application().connect(title_re="Soulless.*", timeout=20)
+        app = Application().start("Soulless 1.3HM/Soulless Hard Mode.exe")
+        #app = Application().connect(title_re="Soulless.*", timeout=20)
         return app
 
     def get_window_dialog(self):
@@ -54,12 +55,11 @@ class SoullessEnv(gym.Env):
         send_keys("{VK_LEFT up}")
         sleep(2)
 
-
     def capture_window(self):
-        """:returns a PIL image of the dialog cropped to exclude the margins for resizing the window"""
+        """:returns a np array image of the dialog cropped to exclude the margins for resizing the window"""
         rect = self.dialog.rectangle()
         left, top, right, bottom = rect.left + 8, rect.top, rect.right - 8, rect.bottom - 7
-        return grab(bbox=(left, top, right, bottom))
+        return np.array(grab(bbox=(left, top, right, bottom)))
 
     def step(self, action: int):
         """expects the game to be in a suspended state"""
@@ -67,7 +67,7 @@ class SoullessEnv(gym.Env):
         current_deathcount = self.get_deathcount()
         is_done = current_deathcount > self.deathcount
         self.deathcount = current_deathcount
-        obs = np.array(self.capture_window())
+        obs = self.capture_window()
         keystrokes = self.get_action_transition(self.PREVIOUS_ACTION, action)
         self.perform_action(keystrokes)
         self.PREVIOUS_ACTION = action
@@ -97,6 +97,7 @@ class SoullessEnv(gym.Env):
         send_keys("{r down}")
         send_keys("{r up}")
         self.process.suspend()
+        return self.capture_window()
 
     def render(self, mode='human'):
         pass
@@ -105,7 +106,7 @@ class SoullessEnv(gym.Env):
         self.application.kill()
 
     def get_observation_space_size(self):
-        return tuple([*self.capture_window().size, 3])
+        return self.capture_window().shape
 
     def get_deathcount(self):
         """:returns the number of times the kid has died"""
