@@ -2,7 +2,7 @@ from gym import make
 from gym_soulless.envs import SoullessEnv
 
 if __name__ == "__main__":
-    envs = [make("soulless-v0") for x in range(5)]
+    envs = [make("soulless-v0") for x in range(16)]
     RUNS = 1
     for env in envs:
         for x in range(RUNS):

@@ -96,7 +96,9 @@ class SoullessEnv(gym.Env):
         self.process.suspend()
 
     def reset(self):
+
         self.process.resume()
+        sleep(0.2) # this pause helps prevent a race condition that makes set_focus error out
         self.dialog.set_focus()
         send_keys("{r down}")
         send_keys("{r up}")
