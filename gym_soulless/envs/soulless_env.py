@@ -1,15 +1,26 @@
 import gym
-from gym import error, spaces, utils
-from gym.utils import seeding
-from pywinauto import Application, findwindows
+from gym import spaces
+from pywinauto import Application
 from pywinauto.keyboard import send_keys
 from time import sleep
 from psutil import Process
-from pywinauto.timings import Timings
 import re
 import numpy as np
-from PIL.ImageOps import crop
 from PIL.ImageGrab import grab
+from decorator import decorator
+
+
+@decorator
+def try_loop(func, error_type=RuntimeError, *args, **kwargs):
+    """executes func until it runs without throwing error_type"""
+    while True:
+        try:
+            result = func(*args, **kwargs)
+        except error_type as e:
+            print(e)
+        else:
+            break
+    return result
 
 
 class SoullessEnv(gym.Env):
@@ -23,6 +34,7 @@ class SoullessEnv(gym.Env):
         self.process_id = self.application.process
         self.process = Process(pid=self.process_id)
         self.dialog = self.get_window_dialog()
+        self.set_focus()
         self.navigate_main_menu()
         self.enter_avoidance()
         self.process.suspend()
@@ -40,9 +52,16 @@ class SoullessEnv(gym.Env):
 
     def get_window_dialog(self):
         """:returns the main dialog of the application, which is the entry-point for interacting with it"""
-        dialog = self.application.top_window()
-        dialog.set_focus()
-        return dialog
+        return self._top_window()
+
+    @try_loop(error_type=RuntimeError)
+    def set_focus(self):
+        """brings the window of this environment into focus"""
+        return self.dialog.set_focus()
+
+    @try_loop(error_type=RuntimeError)
+    def _top_window(self):
+        return self.application.top_window()
 
     def navigate_main_menu(self):
         """from the title screen it navigates the menus until it enters the game"""
@@ -63,7 +82,9 @@ class SoullessEnv(gym.Env):
 
     def step(self, action: int):
         """expects the game to be in a suspended state"""
-        self.dialog.set_focus()
+
+        self.set_focus()
+
         try:
             current_deathcount = self.get_deathcount()
             is_done = current_deathcount > self.deathcount
@@ -96,13 +117,12 @@ class SoullessEnv(gym.Env):
         self.process.suspend()
 
     def reset(self):
-
         self.process.resume()
-        sleep(0.2) # this pause helps prevent a race condition that makes set_focus error out
-        self.dialog.set_focus()
+        self.set_focus()
         send_keys("{r down}")
         send_keys("{r up}")
         self.process.suspend()
+
         return self.capture_window()
 
     def render(self, mode='human'):
