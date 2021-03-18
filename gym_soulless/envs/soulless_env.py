@@ -1,12 +1,14 @@
 import gym
 from gym import spaces
 from pywinauto import Application
-from pywinauto.keyboard import send_keys
 from time import sleep
 from psutil import Process
 import re
 import numpy as np
-from PIL.ImageGrab import grab
+from PIL import Image
+from win32gui import GetClientRect, GetWindowDC, DeleteObject, ReleaseDC
+from win32ui import CreateDCFromHandle, CreateBitmap
+from ctypes import windll
 from decorator import decorator
 from ahk.window import Window
 from ahk.keys import LEFT, RIGHT, SHIFT
@@ -40,6 +42,7 @@ class SoullessEnv(gym.Env):
         sleep(10)
         self.window = Window.from_pid(self.AHK, self.process_id)
         self.dialog = self.get_window_dialog()
+        self.handle = self.dialog.handle
         self.navigate_main_menu()
         self.enter_avoidance()
         self.process.suspend()
@@ -59,11 +62,6 @@ class SoullessEnv(gym.Env):
         return self._top_window()
 
     @try_loop(error_type=RuntimeError)
-    def set_focus(self):
-        """brings the window of this environment into focus"""
-        return self.dialog.set_focus()
-
-    @try_loop(error_type=RuntimeError)
     def _top_window(self):
         return self.application.top_window()
 
@@ -80,10 +78,36 @@ class SoullessEnv(gym.Env):
         sleep(2)
 
     def capture_window(self):
-        """:returns a np array image of the dialog cropped to exclude the margins for resizing the window"""
-        rect = self.dialog.rectangle()
-        left, top, right, bottom = rect.left + 8, rect.top, rect.right - 8, rect.bottom - 7
-        return np.array(grab(bbox=(left, top, right, bottom)))
+        """:returns a np array image of the dialog cropped to exclude the margins for resizing the window
+        https://stackoverflow.com/questions/19695214/python-screenshot-of-inactive-window-printwindow-win32gui"""
+        left, top, right, bot = GetClientRect(self.handle)
+        w = right - left
+        h = bot - top
+
+        hwndDC = GetWindowDC(self.handle)
+        mfcDC = CreateDCFromHandle(hwndDC)
+        saveDC = mfcDC.CreateCompatibleDC()
+
+        saveBitMap = CreateBitmap()
+        saveBitMap.CreateCompatibleBitmap(mfcDC, w, h)
+
+        saveDC.SelectObject(saveBitMap)
+
+        result = windll.user32.PrintWindow(self.handle, saveDC.GetSafeHdc(), 3)
+
+        bmpinfo = saveBitMap.GetInfo()
+        bmpstr = saveBitMap.GetBitmapBits(True)
+
+        im = Image.frombuffer(
+            'RGB',
+            (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
+            bmpstr, 'raw', 'BGRX', 0, 1)
+
+        DeleteObject(saveBitMap.GetHandle())
+        saveDC.DeleteDC()
+        mfcDC.DeleteDC()
+        ReleaseDC(self.handle, hwndDC)
+        return np.array(im)
 
     def step(self, action: int):
         """expects the game to be in a suspended state"""
