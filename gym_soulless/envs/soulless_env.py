@@ -11,7 +11,7 @@ from win32ui import CreateDCFromHandle, CreateBitmap
 from ctypes import windll
 from decorator import decorator
 from ahk.window import Window
-from ahk.keys import LEFT, RIGHT, SHIFT
+from ahk.keys import KEYS
 from ahk import AHK
 
 
@@ -31,7 +31,7 @@ def try_loop(func, error_type=RuntimeError, *args, **kwargs):
 class SoullessEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     DEATHCOUNT_PATTERN = re.compile("(\d+)")
-    KEYS = (LEFT, RIGHT, SHIFT)
+    KEYS = (KEYS.LEFT, KEYS.RIGHT, KEYS.SHIFT)
     TRANSITION_TO_ACTION = {"10": "UP", "01": "DOWN", "00": False, "11": False}
 
     def __init__(self):
