@@ -8,6 +8,9 @@ import re
 import numpy as np
 from PIL.ImageGrab import grab
 from decorator import decorator
+from ahk.window import Window
+from ahk.keys import LEFT, RIGHT, SHIFT
+from ahk import AHK
 
 
 @decorator
@@ -26,15 +29,17 @@ def try_loop(func, error_type=RuntimeError, *args, **kwargs):
 class SoullessEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     DEATHCOUNT_PATTERN = re.compile("(\d+)")
-    KEYS = ("VK_LEFT", "VK_RIGHT", "VK_LSHIFT")
-    TRANSITION_TO_ACTION = {"10": "up", "01": "down", "00": False, "11": False}
+    KEYS = (LEFT, RIGHT, SHIFT)
+    TRANSITION_TO_ACTION = {"10": "UP", "01": "DOWN", "00": False, "11": False}
 
     def __init__(self):
+        self.AHK = AHK()
         self.application = self.start_game()
         self.process_id = self.application.process
         self.process = Process(pid=self.process_id)
+        sleep(10)
+        self.window = Window.from_pid(self.AHK, self.process_id)
         self.dialog = self.get_window_dialog()
-        self.set_focus()
         self.navigate_main_menu()
         self.enter_avoidance()
         self.process.suspend()
@@ -47,7 +52,6 @@ class SoullessEnv(gym.Env):
     def start_game(self):
         """starts the Soulless process"""
         app = Application().start("D:/Users/david/PycharmProjects/reinforcement-learning/gym-soulless/Soulless 1.3HM/Soulless Hard Mode.exe")
-        # app = Application().connect(title_re="Soulless.*", timeout=20)
         return app
 
     def get_window_dialog(self):
@@ -65,13 +69,14 @@ class SoullessEnv(gym.Env):
 
     def navigate_main_menu(self):
         """from the title screen it navigates the menus until it enters the game"""
-        send_keys("{VK_LSHIFT down} {VK_LSHIFT up}")
+        self.window.send("{Shift}")
         sleep(3)
-        send_keys("{VK_LSHIFT down} {VK_LSHIFT up}")
+        self.window.send("{Shift}")
 
     def enter_avoidance(self):
-        send_keys("{VK_LEFT down}")
-        send_keys("{VK_LEFT up}")
+        self.window.send("{Left down}")
+        sleep(0.1)
+        self.window.send("{Left up}")
         sleep(2)
 
     def capture_window(self):
@@ -82,8 +87,6 @@ class SoullessEnv(gym.Env):
 
     def step(self, action: int):
         """expects the game to be in a suspended state"""
-
-        self.set_focus()
 
         try:
             current_deathcount = self.get_deathcount()
@@ -107,20 +110,17 @@ class SoullessEnv(gym.Env):
         old_action, new_action = bin(old_action)[2:].zfill(3), bin(new_action)[2:].zfill(3)
         actions = map(SoullessEnv.TRANSITION_TO_ACTION.get, map("".join, zip(old_action, new_action)))
 
-        return "".join(f"{{{key} {action}}}" for key, action in zip(SoullessEnv.KEYS, actions) if action)
+        return "".join(getattr(key, action) for key, action in zip(SoullessEnv.KEYS, actions) if action)
 
     def perform_action(self, keystrokes: str):
         """:param keystrokes is the input to the send_keys function"""
         self.process.resume()
-        send_keys(keystrokes)
-        sleep(0.1)
+        self.window.send(keystrokes)
         self.process.suspend()
 
     def reset(self):
         self.process.resume()
-        self.set_focus()
-        send_keys("{r down}")
-        send_keys("{r up}")
+        self.window.send("r")
         self.process.suspend()
 
         return self.capture_window()
@@ -136,9 +136,7 @@ class SoullessEnv(gym.Env):
 
     def get_deathcount(self):
         """:returns the number of times the kid has died"""
-        self.process.resume()
-        title = self.dialog.texts()[0]
-        self.process.suspend()
+        title = self.window.title.decode("utf8")
         return int(re.search(SoullessEnv.DEATHCOUNT_PATTERN, title)[0])
 
 

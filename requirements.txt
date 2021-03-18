@@ -5,3 +5,4 @@ pywinauto>=0.6.8
 psutil>=5.7.3
 pillow>=8.0.1
 decorator>=4.4.2
+ahk>=0.12.0
