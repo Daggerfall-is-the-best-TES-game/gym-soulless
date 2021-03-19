@@ -39,7 +39,7 @@ class SoullessEnv(gym.Env):
         self.application = self.start_game()
         self.process_id = self.application.process
         self.process = Process(pid=self.process_id)
-        sleep(10)
+        sleep(20)
         self.window = Window.from_pid(self.AHK, self.process_id)
         self.dialog = self.get_window_dialog()
         self.handle = self.dialog.handle
@@ -107,7 +107,7 @@ class SoullessEnv(gym.Env):
         saveDC.DeleteDC()
         mfcDC.DeleteDC()
         ReleaseDC(self.handle, hwndDC)
-        return np.array(im)
+        return np.array(im, copy=False)
 
     def step(self, action: int):
         """expects the game to be in a suspended state"""
