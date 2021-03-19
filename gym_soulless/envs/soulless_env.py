@@ -43,6 +43,21 @@ class SoullessEnv(gym.Env):
         self.window = Window.from_pid(self.AHK, self.process_id)
         self.dialog = self.get_window_dialog()
         self.handle = self.dialog.handle
+
+        left, top, right, bot = GetClientRect(self.handle)
+        w = right - left
+        h = bot - top
+
+        self.hwndDC = GetWindowDC(self.handle)
+        self.mfcDC = CreateDCFromHandle(self.hwndDC)
+        self.saveDC = self.mfcDC.CreateCompatibleDC()
+        self.saveDC_handle = self.saveDC.GetSafeHdc()
+
+        self.saveBitMap = CreateBitmap()
+        self.saveBitMap.CreateCompatibleBitmap(self.mfcDC, w, h)
+        self.bmpinfo = self.saveBitMap.GetInfo()
+        self.saveDC.SelectObject(self.saveBitMap)
+
         self.navigate_main_menu()
         self.enter_avoidance()
         self.process.suspend()
@@ -80,45 +95,24 @@ class SoullessEnv(gym.Env):
     def capture_window(self):
         """:returns a np array image of the dialog cropped to exclude the margins for resizing the window
         https://stackoverflow.com/questions/19695214/python-screenshot-of-inactive-window-printwindow-win32gui"""
-        left, top, right, bot = GetClientRect(self.handle)
-        w = right - left
-        h = bot - top
 
-        hwndDC = GetWindowDC(self.handle)
-        mfcDC = CreateDCFromHandle(hwndDC)
-        saveDC = mfcDC.CreateCompatibleDC()
-
-        saveBitMap = CreateBitmap()
-        saveBitMap.CreateCompatibleBitmap(mfcDC, w, h)
-
-        saveDC.SelectObject(saveBitMap)
-
-        result = windll.user32.PrintWindow(self.handle, saveDC.GetSafeHdc(), 3)
-
-        bmpinfo = saveBitMap.GetInfo()
-        bmpstr = saveBitMap.GetBitmapBits(True)
+        windll.user32.PrintWindow(self.handle, self.saveDC_handle, 3)
+        bmpstr = self.saveBitMap.GetBitmapBits(True)
 
         im = Image.frombuffer(
             'RGB',
-            (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
+            (self.bmpinfo['bmWidth'], self.bmpinfo['bmHeight']),
             bmpstr, 'raw', 'BGRX', 0, 1)
 
-        DeleteObject(saveBitMap.GetHandle())
-        saveDC.DeleteDC()
-        mfcDC.DeleteDC()
-        ReleaseDC(self.handle, hwndDC)
         return np.array(im, copy=False)
 
     def step(self, action: int):
         """expects the game to be in a suspended state"""
 
-        try:
-            current_deathcount = self.get_deathcount()
-            is_done = current_deathcount > self.deathcount
-            self.deathcount = current_deathcount
-        except TypeError as e:
-            print("could not find deathcount")
-            is_done = False
+        current_deathcount = self.get_deathcount()
+        is_done = current_deathcount > self.deathcount
+        self.deathcount = current_deathcount
+
         obs = self.capture_window()
         keystrokes = self.get_action_transition(self.PREVIOUS_ACTION, action)
         self.perform_action(keystrokes)
@@ -153,6 +147,10 @@ class SoullessEnv(gym.Env):
         pass
 
     def close(self):
+        DeleteObject(self.saveBitMap.GetHandle())
+        self.saveDC.DeleteDC()
+        self.mfcDC.DeleteDC()
+        ReleaseDC(self.handle, self.hwndDC)
         self.application.kill()
 
     def get_observation_space_size(self):
