@@ -103,12 +103,11 @@ class SoullessEnv(gym.Env):
             'RGB',
             (self.bmpinfo['bmWidth'], self.bmpinfo['bmHeight']),
             bmpstr, 'raw', 'BGRX', 0, 1)
-
         return np.array(im, copy=False)
 
     def step(self, action: int):
         """expects the game to be in a suspended state"""
-
+        self.process.resume()
         current_deathcount = self.get_deathcount()
         is_done = current_deathcount > self.deathcount
         self.deathcount = current_deathcount
@@ -117,6 +116,7 @@ class SoullessEnv(gym.Env):
         keystrokes = self.get_action_transition(self.PREVIOUS_ACTION, action)
         self.perform_action(keystrokes)
         self.PREVIOUS_ACTION = action
+        self.process.suspend()
 
         return obs, 1.0, is_done, {}
 
@@ -132,9 +132,9 @@ class SoullessEnv(gym.Env):
 
     def perform_action(self, keystrokes: str):
         """:param keystrokes is the input to the send_keys function"""
-        self.process.resume()
+
         self.window.send(keystrokes)
-        self.process.suspend()
+
 
     def reset(self):
         self.process.resume()
