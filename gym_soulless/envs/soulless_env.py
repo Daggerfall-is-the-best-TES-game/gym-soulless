@@ -39,10 +39,9 @@ class SoullessEnv(gym.Env):
         self.application = self.start_game()
         self.process_id = self.application.process
         self.process = Process(pid=self.process_id)
-        sleep(20)
-        self.window = Window.from_pid(self.AHK, self.process_id)
         self.dialog = self.get_window_dialog()
         self.handle = self.dialog.handle
+        self.window = Window.from_pid(self.AHK, self.process_id)
 
         left, top, right, bot = GetClientRect(self.handle)
         w = right - left
@@ -82,14 +81,14 @@ class SoullessEnv(gym.Env):
 
     def navigate_main_menu(self):
         """from the title screen it navigates the menus until it enters the game"""
-        self.window.send("{Shift}")
+        self.window.send("{Shift}", blocking=False)
         sleep(3)
-        self.window.send("{Shift}")
+        self.window.send("{Shift}", blocking=False)
 
     def enter_avoidance(self):
-        self.window.send("{Left down}")
+        self.window.send("{Left down}", blocking=False)
         sleep(0.1)
-        self.window.send("{Left up}")
+        self.window.send("{Left up}", blocking=False)
         sleep(2)
 
     def capture_window(self):
@@ -123,7 +122,7 @@ class SoullessEnv(gym.Env):
     def get_action_transition(self, old_action: int, new_action: int):
         """:param old_action is the action performed on the previous step, or no-op if this is the first step
         :param new_action is the action performed on this step
-        :returns the input to the sendkeys function need to transition from the old action to the new action"""
+        :returns the input to the send function needed to transition from the old action to the new action"""
 
         old_action, new_action = bin(old_action)[2:].zfill(3), bin(new_action)[2:].zfill(3)
         actions = map(SoullessEnv.TRANSITION_TO_ACTION.get, map("".join, zip(old_action, new_action)))
@@ -132,13 +131,11 @@ class SoullessEnv(gym.Env):
 
     def perform_action(self, keystrokes: str):
         """:param keystrokes is the input to the send_keys function"""
-
-        self.window.send(keystrokes)
-
+        self.window.send(keystrokes, blocking=False)
 
     def reset(self):
         self.process.resume()
-        self.window.send("r")
+        self.window.send("r", blocking=False)
         self.process.suspend()
 
         return self.capture_window()
