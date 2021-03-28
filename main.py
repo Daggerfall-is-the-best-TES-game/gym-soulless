@@ -21,7 +21,7 @@ if __name__ == "__main__":
     #
     #     env.close()
 
-    envs = [make("soulless-v0") for x in range(1)]
+    envs = [make("soulless-v0") for x in range(5)]
     for env in envs:
         env.reset()
     while True:

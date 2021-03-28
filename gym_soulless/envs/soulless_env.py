@@ -8,11 +8,15 @@ import numpy as np
 from PIL import Image
 from win32gui import GetClientRect, GetWindowDC, DeleteObject, ReleaseDC
 from win32ui import CreateDCFromHandle, CreateBitmap
-from ctypes import windll
+from ctypes import WinDLL
+from ctypes.wintypes import HWND
 from decorator import decorator
 from ahk.window import Window
 from ahk.keys import KEYS
 from ahk import AHK
+
+
+
 
 
 @decorator
@@ -30,6 +34,7 @@ def try_loop(func, error_type=RuntimeError, *args, **kwargs):
 
 class SoullessEnv(gym.Env):
     metadata = {'render.modes': ['human']}
+    user32 = WinDLL("user32")
     DEATHCOUNT_PATTERN = re.compile("(\d+)")
     KEYS = (KEYS.LEFT, KEYS.RIGHT, KEYS.SHIFT)
     TRANSITION_TO_ACTION = {"10": "UP", "01": "DOWN", "00": False, "11": False}
@@ -95,7 +100,7 @@ class SoullessEnv(gym.Env):
         """:returns a np array image of the dialog cropped to exclude the margins for resizing the window
         https://stackoverflow.com/questions/19695214/python-screenshot-of-inactive-window-printwindow-win32gui"""
 
-        windll.user32.PrintWindow(self.handle, self.saveDC_handle, 3)
+        SoullessEnv.user32.PrintWindow(HWND(self.handle), self.saveDC_handle, 3)
         bmpstr = self.saveBitMap.GetBitmapBits(True)
 
         im = Image.frombuffer(
