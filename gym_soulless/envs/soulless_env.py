@@ -140,7 +140,7 @@ class SoullessEnv(gym.Env):
 
     def reset(self):
         self.process.resume()
-        self.window.send("r", blocking=False)
+        self.window.send("r", delay=70)
         self.process.suspend()
 
         return self.capture_window()
