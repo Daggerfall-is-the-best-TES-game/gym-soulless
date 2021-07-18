@@ -6,6 +6,7 @@ from psutil import Process
 import re
 import numpy as np
 from PIL import Image
+from time import perf_counter
 from win32gui import GetClientRect, GetWindowDC, DeleteObject, ReleaseDC
 from win32ui import CreateDCFromHandle, CreateBitmap
 from ctypes import WinDLL
@@ -112,6 +113,7 @@ class SoullessEnv(gym.Env):
     def step(self, action: int):
         """expects the game to be in a suspended state"""
         self.process.resume()
+        step_start_time = perf_counter()
         current_deathcount = self.get_deathcount()
         is_done = current_deathcount > self.deathcount
         self.deathcount = current_deathcount
@@ -121,8 +123,11 @@ class SoullessEnv(gym.Env):
         self.perform_action(keystrokes)
         self.PREVIOUS_ACTION = action
         self.process.suspend()
+        step_end_time = perf_counter()
 
-        return obs, 1.0, is_done, {}
+        reward = step_end_time - step_start_time
+
+        return obs, reward, is_done, {}
 
     def get_action_transition(self, old_action: int, new_action: int):
         """:param old_action is the action performed on the previous step, or no-op if this is the first step

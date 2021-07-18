@@ -25,8 +25,9 @@ if __name__ == "__main__":
     for env in envs:
         env.reset()
     while True:
-        for env in envs:
+        for env_idx, env in enumerate(envs):
             obs, reward, done, _ = env.step(env.action_space.sample())
+            print(f"{env_idx}: {reward}")
             if done:
                 env.reset()
 
