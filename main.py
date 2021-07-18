@@ -24,11 +24,16 @@ if __name__ == "__main__":
     envs = [make("soulless-v0") for x in range(1)]
     for env in envs:
         env.reset()
+    total_reward = [0] * len(envs)
     while True:
         for env_idx, env in enumerate(envs):
+
             obs, reward, done, _ = env.step(env.action_space.sample())
-            print(f"{env_idx}: {reward}")
+            total_reward[env_idx] += reward
             if done:
+                print(f"{env_idx}: {total_reward}")
+                print(env.deathcount)
+                total_reward[env_idx] = 0
                 env.reset()
 
 

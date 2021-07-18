@@ -6,7 +6,7 @@ from psutil import Process
 import re
 import numpy as np
 from PIL import Image
-from time import perf_counter
+from time import perf_counter, sleep
 from win32gui import GetClientRect, GetWindowDC, DeleteObject, ReleaseDC
 from win32ui import CreateDCFromHandle, CreateBitmap
 from ctypes import WinDLL
@@ -125,10 +125,11 @@ class SoullessEnv(gym.Env):
         return is_done, obs, elapsed_time
 
     def _step(self, action):
-        is_done = self.is_done()
-        self.update_env_deathcount()
-        obs = self.capture_window()
         self.perform_action(action)
+        obs = self.capture_window()
+        is_done = self.is_done()
+        if is_done:
+            self.update_env_deathcount()
         return is_done, obs
 
     def perform_action(self, action):
