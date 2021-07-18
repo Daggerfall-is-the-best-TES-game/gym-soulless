@@ -68,7 +68,7 @@ class SoullessEnv(gym.Env):
         self.process.suspend()
 
         self.PREVIOUS_ACTION = 0
-        self.deathcount = self.get_deathcount()
+        self.deathcount = self.get_game_deathcount()
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(low=0, high=255, shape=self.get_observation_space_size())
 
@@ -112,22 +112,35 @@ class SoullessEnv(gym.Env):
 
     def step(self, action: int):
         """expects the game to be in a suspended state"""
+        is_done, obs, reward = self.step_and_track_elapsed_time(action)
+        return obs, reward, is_done, {}
+
+    def step_and_track_elapsed_time(self, action):
         self.process.resume()
         step_start_time = perf_counter()
-        current_deathcount = self.get_deathcount()
-        is_done = current_deathcount > self.deathcount
-        self.deathcount = current_deathcount
-
-        obs = self.capture_window()
-        keystrokes = self.get_action_transition(self.PREVIOUS_ACTION, action)
-        self.perform_action(keystrokes)
-        self.PREVIOUS_ACTION = action
+        is_done, obs = self._step(action)
         self.process.suspend()
         step_end_time = perf_counter()
+        elapsed_time = step_end_time - step_start_time
+        return is_done, obs, elapsed_time
 
-        reward = step_end_time - step_start_time
+    def _step(self, action):
+        is_done = self.is_done()
+        self.update_env_deathcount()
+        obs = self.capture_window()
+        self.perform_action(action)
+        return is_done, obs
 
-        return obs, reward, is_done, {}
+    def perform_action(self, action):
+        keystrokes = self.get_action_transition(self.PREVIOUS_ACTION, action)
+        self.send_input_to_game(keystrokes)
+        self.PREVIOUS_ACTION = action
+
+    def is_done(self):
+        return self.get_game_deathcount() > self.deathcount
+
+    def update_env_deathcount(self):
+        self.deathcount = self.get_game_deathcount()
 
     def get_action_transition(self, old_action: int, new_action: int):
         """:param old_action is the action performed on the previous step, or no-op if this is the first step
@@ -139,7 +152,7 @@ class SoullessEnv(gym.Env):
 
         return "".join(getattr(key, action) for key, action in zip(SoullessEnv.KEYS, actions) if action)
 
-    def perform_action(self, keystrokes: str):
+    def send_input_to_game(self, keystrokes: str):
         """:param keystrokes is the input to the send_keys function"""
         self.window.send(keystrokes, blocking=False)
 
@@ -163,7 +176,7 @@ class SoullessEnv(gym.Env):
     def get_observation_space_size(self):
         return tuple([*self.capture_window().shape, 3])
 
-    def get_deathcount(self):
+    def get_game_deathcount(self):
         """:returns the number of times the kid has died"""
         title = self.window.title.decode("utf8")
         return int(re.search(SoullessEnv.DEATHCOUNT_PATTERN, title)[0])
