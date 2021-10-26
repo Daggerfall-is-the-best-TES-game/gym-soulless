@@ -17,9 +17,6 @@ from ahk.keys import KEYS
 from ahk import AHK
 
 
-
-
-
 @decorator
 def try_loop(func, error_type=RuntimeError, *args, **kwargs):
     """executes func until it runs without throwing error_type"""
@@ -37,7 +34,7 @@ class SoullessEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     user32 = WinDLL("user32")
     DEATHCOUNT_PATTERN = re.compile("(\d+)")
-    KEYS = (KEYS.LEFT, KEYS.RIGHT, KEYS.SHIFT)
+    KEYS = (KEYS.LEFT, KEYS.RIGHT, KEYS.DELETE)
     TRANSITION_TO_ACTION = {"10": "UP", "01": "DOWN", "00": False, "11": False}
 
     def __init__(self):
@@ -70,11 +67,17 @@ class SoullessEnv(gym.Env):
         self.PREVIOUS_ACTION = 0
         self.deathcount = self.get_game_deathcount()
         self.action_space = spaces.Discrete(6)
-        self.observation_space = spaces.Box(low=0, high=255, shape=self.get_observation_space_size())
+        self.elapsed_time = 0.0
+
+        self.observation_space = spaces.Dict({"window":
+                                                  spaces.Box(low=0, high=255, shape=self.get_observation_space_size(),
+                                                             dtype=np.uint8),
+                                              "time": spaces.Box(low=0, high=900, shape=(1,))})
 
     def start_game(self):
         """starts the Soulless process"""
-        app = Application().start("D:/Users/david/PycharmProjects/reinforcement-learning/gym-soulless/Soulless 1.3HM/Soulless Hard Mode.exe")
+        app = Application().start(
+            "D:/Users/david/PycharmProjects/reinforcement-learning/gym-soulless/Soulless 1.3HM/Soulless Hard Mode.exe")
         return app
 
     def get_window_dialog(self):
@@ -93,7 +96,7 @@ class SoullessEnv(gym.Env):
 
     def enter_avoidance(self):
         self.window.send("{Left down}", blocking=False)
-        sleep(0.1)
+        sleep(0.3)
         self.window.send("{Left up}", blocking=False)
         sleep(2)
 
@@ -113,6 +116,7 @@ class SoullessEnv(gym.Env):
     def step(self, action: int):
         """expects the game to be in a suspended state"""
         is_done, obs, reward = self.step_and_track_elapsed_time(action)
+        obs = {"window": obs, "time": self.elapsed_time}
         return obs, reward, is_done, {}
 
     def step_and_track_elapsed_time(self, action):
@@ -122,6 +126,7 @@ class SoullessEnv(gym.Env):
         self.process.suspend()
         step_end_time = perf_counter()
         elapsed_time = step_end_time - step_start_time
+        self.elapsed_time += elapsed_time
         return is_done, obs, elapsed_time
 
     def _step(self, action):
@@ -159,10 +164,11 @@ class SoullessEnv(gym.Env):
 
     def reset(self):
         self.process.resume()
-        self.window.send("r", delay=70)
+        self.window.send("r", delay=150)
         self.process.suspend()
+        self.elapsed_time = 0.0
 
-        return self.capture_window()
+        return {"window":self.capture_window(), "time":self.elapsed_time}
 
     def render(self, mode='human'):
         pass
@@ -175,12 +181,9 @@ class SoullessEnv(gym.Env):
         self.application.kill()
 
     def get_observation_space_size(self):
-        return tuple([*self.capture_window().shape, 3])
+        return self.capture_window().shape
 
     def get_game_deathcount(self):
         """:returns the number of times the kid has died"""
         title = self.window.title.decode("utf8")
         return int(re.search(SoullessEnv.DEATHCOUNT_PATTERN, title)[0])
-
-
-
