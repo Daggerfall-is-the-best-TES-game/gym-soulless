@@ -116,7 +116,7 @@ class SoullessEnv(gym.Env):
     def step(self, action: int):
         """expects the game to be in a suspended state"""
         is_done, obs, reward = self.step_and_track_elapsed_time(action)
-        obs = {"window": obs, "time": self.elapsed_time}
+        obs = {"window": obs, "time": np.array([self.elapsed_time], dtype=np.float)}
         return obs, reward, is_done, {}
 
     def step_and_track_elapsed_time(self, action):
@@ -168,7 +168,7 @@ class SoullessEnv(gym.Env):
         self.process.suspend()
         self.elapsed_time = 0.0
 
-        return {"window":self.capture_window(), "time":self.elapsed_time}
+        return {"window": self.capture_window(), "time": np.array([self.elapsed_time], dtype=np.float)}
 
     def render(self, mode='human'):
         pass
